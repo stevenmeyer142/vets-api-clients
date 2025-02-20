@@ -19,7 +19,7 @@ const createClient = async () => {
       client_id,
       client_secret,
       redirect_uris: [
-        'http://localhost:8080/auth/cb'
+        'http://localhost:8081/auth/cb'
       ],
     });
   });
@@ -88,12 +88,37 @@ const verifyVeteranStatus = async (req, res, next) => {
   }
 };
 
+
 const wrapAuth = async (req, res, next) => {
+  
   //Passport or OIDC don't seem to set 'err' if our Auth Server sets them in the URL as params so we need to do this to catch that instead of relying on callback
   if (req.query.error) {
     return next(req.query.error_description);
   }
-  passport.authenticate("oidc", { successRedirect: "/home", failureRedirect: "/"})(req, res, next);
+  
+  console.log('wrapAuth response ', req.query);
+  const code = req.query.code;
+  
+  
+ // passport.authenticate("oidc", { successRedirect: "/home", failureRedirect: "/"})(req, res, next);
+ const data = new URLSearchParams();
+data.append('grant_type', 'authorization_code');
+data.append('code', code);
+data.append('redirect_uri', 'http://localhost:8081/home');
+const url = `https://${env}-api.va.gov/oauth2/claims/v1/token`;
+const authorization = 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64');
+fetch(url, {
+	method: 'POST',
+	headers: {
+		'Content-Type': 'application/x-www-form-urlencoded',
+    'Authorization': authorization
+	},
+	body: data
+})
+	.then(response => response.json())
+	.then(data => console.log(data))
+	.catch(error => console.error(error));
+
 };
 
 const loggedIn = (req) => {
@@ -102,7 +127,7 @@ const loggedIn = (req) => {
 
 const startApp = (client) => {
   const app = express();
-  const port = 8080;
+  const port = 8081;
   const secret = 'My Super Secret Secret'
   let db = new sqlite3.Database('./db/lighthouse.sqlite', (err) => {
     if (err) {
@@ -121,20 +146,26 @@ const startApp = (client) => {
 
   app.get('/', (req, res) => {
     var user = {};
+    redirect_uri = 'http://localhost:8081/auth/cb';
+    nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
+    const scope="profile openid offline_access claim.read claim.write";
+   // const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
+    const url = `https://${env}-api.va.gov/oauth2/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
+ 
     if (loggedIn(req)) {
       user = req.session.passport.user;
       req.session.user = req.session.passport.user;
       req.session.tokenset = user.tokenset;
-      res.render('index', { tokenset: user.tokenset } )
+      res.render('index', { tokenset: user.tokenset, autherizeLink : url } )
     } else {
-      res.render('index', { tokenset: {} } )
+      res.render('index', { tokenset: {}, autherizeLink : url   } )
     }
   });
 
   app.get('/status', verifyVeteranStatus);
   app.get('/userdetails', userDetails);
   app.get('/coming_soon', (req, res) => {
-    res.render('coming_soon', { tokenset: {} } )
+    res.render('coming_soon', { tokenset: {},} )
   })
 
   app.get('/home', (req, res) => {
