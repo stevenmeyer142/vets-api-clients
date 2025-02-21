@@ -11,6 +11,7 @@ const ROOT_URL = `https://${env}-api.va.gov/oauth2/.well-known/openid-configurat
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 var bodyParser = require('body-parser');
+const redirect_uri = 'http://localhost:8081/auth/cb';
 
 const createClient = async () => {
   Issuer.defaultHttpOptions = { timeout: 2500 };
@@ -104,17 +105,29 @@ const wrapAuth = async (req, res, next) => {
  const data = new URLSearchParams();
 data.append('grant_type', 'authorization_code');
 data.append('code', code);
-data.append('redirect_uri', 'http://localhost:8081/home');
+data.append('redirect_uri', redirect_uri);
 const url = `https://${env}-api.va.gov/oauth2/claims/v1/token`;
 const authorization = 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64');
-fetch(url, {
-	method: 'POST',
-	headers: {
-		'Content-Type': 'application/x-www-form-urlencoded',
+const request = new Request(url, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
     'Authorization': authorization
-	},
-	body: data
-})
+  },
+  body: data
+});
+
+
+// console.log('\nRequest url', request.url, "\n ");
+// console.log('\nRequest method', request.method.toString(), "\n ");
+// for (var pair of request.headers.entries()) {
+//   console.log(pair[0] + ', ' + pair[1]);
+// }
+// console.log('\nRequest body', data.toString(), "\n ");
+
+
+// console.log('\nRequest ', request, "\n ");
+fetch(request)
 	.then(response => response.json())
 	.then(data => console.log(data))
 	.catch(error => console.error(error));
@@ -146,12 +159,13 @@ const startApp = (client) => {
 
   app.get('/', (req, res) => {
     var user = {};
-    redirect_uri = 'http://localhost:8081/auth/cb';
+    
     nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
     const scope="profile openid offline_access claim.read claim.write";
    // const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
-    const url = `https://${env}-api.va.gov/oauth2/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
- 
+    const url = `https://${env}-api.va.gov/oauth2/claims/v1/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
+  
+    console.log("\nAuthorization url ", url, "\n");
     if (loggedIn(req)) {
       user = req.session.passport.user;
       req.session.user = req.session.passport.user;
@@ -169,6 +183,7 @@ const startApp = (client) => {
   })
 
   app.get('/home', (req, res) => {
+    console.log('home');
     if (loggedIn(req)) {
       const users = [];
       const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans`;
