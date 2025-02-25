@@ -10,7 +10,7 @@
         </em>
       </div>
       <div class="site-header__utility-links">
-        <% if (tokenset && tokenset.access_token) { %>
+        <% if (has_token) { %>
           <a href="/auth" class="usa-button site-button-inverse">Logout</a>
         <% } else { %>
           <a href="/auth" class="usa-button site-button-inverse">OAuth Login</a>

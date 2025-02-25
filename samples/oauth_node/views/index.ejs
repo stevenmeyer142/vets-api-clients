@@ -2,16 +2,16 @@
   <%- include('./partials/head') %>
 
   <body>
-    <%- include('./partials/header', { tokenset: tokenset}) %>
+    <%- include('./partials/header', { has_token : has_token}) %>
     <main>
       <div class="large-screen:vads-u-padding-x--0">
-        <%- include('./partials/main_nav', { tokenset: tokenset}) %>
+        <%- include('./partials/main_nav', { has_token: has_token}) %>
         <div class="site-hero clip-bottom">
           <div class="site-l-wrapper">
             <h1 class="vads-u-measure--1 vads-u-font-family--sans">A Node Express Sample App for Lighthouse APIs</h1>
             <p class="va-introtext vads-u-measure--2 vads-u-font-family--sans">
               An almost working sample application with examples of OAuth, the Benefits Intake API, and the Benefits Claims API in Node Express.
-              <a class="usa-button usa-button-big" href="<%= autherizeLink %>">Log In to Get Started</a>
+              <a class="usa-button usa-button-big" href="/auth">Log In to Get Started</a>
             </p>
           </div>
         </div>

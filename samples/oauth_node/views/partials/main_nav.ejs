@@ -4,7 +4,7 @@
       <li class="site-header__nav-item">
         <a class="site-header__nav-item__link " href="https://developer.va.gov" target="_BLANK">Documentation</a>
       </li>
-      <% if (tokenset && tokenset.access_token) { %>
+      <% if (has_token && has_token.access_token) { %>
         <li class="site-header__nav-item">
           <a class="site-header__nav-item__link" href="/claims">View Claims</a>
         </li>
