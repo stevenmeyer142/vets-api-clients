@@ -13,10 +13,11 @@ const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 var bodyParser = require('body-parser');
 const { log } = require('console');
+const version = 'v1';
 const redirect_uri = 'http://localhost:8081/auth/cb';
-const authenticationURL = `https://${env}-api.va.gov/oauth2/claims/v1/authorization`;
-const requestTokenURL = `https://${env}-api.va.gov/oauth2/claims/v1/token`;
-const accessTokenURL = `https://${env}-api.va.gov/oauth2/claims/v1/token`;
+const authenticationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
+const requestTokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
+const accessTokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
 const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
 const scope="profile openid offline_access claim.read claim.write";
 // const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
@@ -188,7 +189,7 @@ const startApp = () => {
   app.get('/', (req, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
     
-    const url = `https://${env}-api.va.gov/oauth2/claims/v1/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
+    const url = `https://${env}-api.va.gov/oauth2/claims/${version}/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
   
     //console.log("\nAuthorization url ", url, "\n");
     if (loggedIn(req)) {
@@ -229,7 +230,7 @@ const startApp = () => {
     if (loggedIn(req)) {
       const access_token = req.session.user.accessToken;
       const has_token = access_token !== undefined;
-      axios.get(`https://${env}-api.va.gov/services/claims/v1/claims`, {
+      axios.get(`https://${env}-api.va.gov/services/claims/${version}/claims`, {
         headers: {
           Authorization: `Bearer ${access_token}`
         }
@@ -256,14 +257,19 @@ const startApp = () => {
         if (err) {
           throw err;
         }
-        axios.get(`https://${env}-api.va.gov/services/claims/v1/claims`, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            'X-VA-First-Name': row.first_name,
-            'X-VA-Last-Name': row.last_name,
-            'X-VA-Birth-Date': row.birth_date,
-            'X-VA-SSN': row.social_security_number
-          }
+        const url =`https://${env}-api.va.gov/services/claims/v1/claims`;
+        const headers = {
+          Authorization: `Bearer ${access_token}`,
+          'X-VA-First-Name': row.first_name,
+          'X-VA-Last-Name': row.last_name,
+          'X-VA-Birth-Date': row.birth_date,
+          'X-VA-SSN': row.social_security_number
+        };
+        console.log('url', url);
+        console.log('headers', headers);
+
+        axios.get(url, {
+          headers: headers
         })
         .then(response => {
           res.render('claims', { user: `${row.first_name} ${row.last_name}`, claims: response.data.data, has_token: has_token });
