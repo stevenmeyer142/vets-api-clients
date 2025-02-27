@@ -13,27 +13,15 @@ const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 var bodyParser = require('body-parser');
 const { log } = require('console');
+const  fs = require('fs');
 const version = 'v1';
 const redirect_uri = 'http://localhost:8081/auth/cb';
 const authenticationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
 const requestTokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
-const accessTokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
 const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
-const scope="profile openid offline_access claim.read claim.write";
-// const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
-
-// const createClient = async () => {
-//   Issuer.defaultHttpOptions = { timeout: 2500 };
-//   return Issuer.discover(ROOT_URL).then(issuer => {
-//     return new issuer.Client({
-//       client_id,
-//       client_secret,
-//       redirect_uris: [
-//         'http://localhost:8081/auth/cb'
-//       ],
-//     });
-//   });
-// }
+//const scope="profile openid offline_access claim.read claim.write";
+const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
+const patient_icn = "5000335";
 
 const configurePassport = () => {
   passport.serializeUser((user, done) => {
@@ -124,46 +112,9 @@ const wrapAuth = async (req, res, next) => {
     res.redirect('/home');
   })(req, res, next);
 
-
-
-  
-// passport.authenticate("oidc", { successRedirect: "/home", failureRedirect: "/"})(req, res, next);
-//  const data = new URLSearchParams();
-// data.append('grant_type', 'authorization_code');
-// data.append('code', code);
-// data.append('redirect_uri', redirect_uri);
-// const url = `https://${env}-api.va.gov/oauth2/claims/v1/token`;
-// const authorization = 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64');
-// const request = new Request(url, {
-//   method: 'POST',
-//   headers: {
-//     'Content-Type': 'application/x-www-form-urlencoded',
-//     'Authorization': authorization
-//   },
-//   body: data
-// });
-
-
-// console.log('\nRequest url', request.url, "\n ");
-// console.log('\nRequest method', request.method.toString(), "\n ");
-// for (var pair of request.headers.entries()) {
-//   console.log(pair[0] + ', ' + pair[1]);
-// }
-// console.log('\nRequest body', data.toString(), "\n ");
-
-
-// console.log('\nRequest ', request, "\n ");
-// fetch(request)
-// 	.then(response => response.json())
-// 	.then(data => console.log(data))
-// 	.catch(error => console.error(error));
-
 };
 
 const loggedIn = (req) => {
-  console.log('req.session', req.session);
-  console.log('req.session.user', req.session.user);
-
    return req.session && req.session.user;
 }
 
@@ -241,6 +192,54 @@ const startApp = () => {
       .catch(error => {
         console.log(error)
       })
+    } else {
+      res.redirect('/auth'); // Redirect the user to login if they are not
+    }
+  });
+
+  app.get('/patient', (req, res) => {
+    if (loggedIn(req)) {
+      const access_token = req.session.user.accessToken;
+      const has_token = access_token !== undefined;
+
+        const url =`https://${env}-api.va.gov/services/fhir/v0/r4/Patient?_id=${patient_icn}`;
+      
+        const headers = {
+          Authorization: `Bearer ${access_token}`,
+          accept : 'application/fhir+json'
+        };
+        console.log('url', url);
+        console.log('headers', headers);
+
+        axios.get(url, {
+          headers: headers
+        })
+        .then(response => {
+          fs.writeFile('example.txt', JSON.stringify(response.data, null, 2), err => {
+            if (err) {
+              console.error(err);
+            } else {
+              console.log('File written successfully');
+            }
+          });
+          
+          res.redirect('/home');
+        })
+        .catch(error => {
+          if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error('Request failed with response:', {
+              status: error.response.status,
+              headers: error.response.headers,
+              data: error.response.data
+            });
+          }
+          console.log(error)
+          console.log('Iam error')
+        })
+      
+
     } else {
       res.redirect('/auth'); // Redirect the user to login if they are not
     }
